@@ -115,8 +115,19 @@ function drawCircle(x, y, size, color) {
 // 涂抹逻辑
 function handleSmearing(x, y) {
     const coveredColors = getCoveredColors(x, y);
+
+    if (coveredColors.length === 0) return;
+
+    // Blend colors in the covered area
     const newColor = blendColors(coveredColors, x, y);
-    drawCircle(x, y, smearBrushSize, newColor);
+
+    // Update colors in `colors` array
+    coveredColors.forEach((point) => {
+        point.color = newColor;
+    });
+
+    // Redraw the affected area on the canvas
+    redrawCanvas();
 }
 
 // 获取笔刷范围内的颜色
@@ -125,7 +136,16 @@ function getCoveredColors(x, y) {
         const dx = point.x - x;
         const dy = point.y - y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance <= smearBrushSize;
+        return distance <= smearBrushSize; // Check if within brush size
+    });
+}
+
+// 重绘画布
+function redrawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+
+    colors.forEach(({ x, y, color }) => {
+        drawCircle(x, y, brushSize, color); // Draw each point with updated color
     });
 }
 
@@ -148,6 +168,7 @@ function blendColors(colorList, x, y) {
     });
 
     if (totalWeight === 0) return '#ffffff';
+
     r = Math.round(r / totalWeight);
     g = Math.round(g / totalWeight);
     b = Math.round(b / totalWeight);
