@@ -41,22 +41,23 @@ let isSmearing = false; // Smearing mode
 let isPickingColor = false; // Whether picking color
 let colors = []; // Store placed colors on the canvas
 
-// Define 14 colors (12 from the color wheel + black and white)
-const paletteColors = [
-    '#FF0000', '#FF7F00', '#FFFF00', '#7FFF00',
-    '#00FF00', '#00FF7F', '#00FFFF', '#007FFF',
-    '#0000FF', '#7F00FF', '#FF00FF', '#FF007F',
-    '#000000', '#FFFFFF'
-];
+// 添加 CSS: 禁用画布的默认触摸行为
+canvas.style.touchAction = 'none';
 
-// Initialize color palette
+// 初始化调色板
 function initPalette() {
+    const paletteColors = [
+        '#FF0000', '#FF7F00', '#FFFF00', '#7FFF00',
+        '#00FF00', '#00FF7F', '#00FFFF', '#007FFF',
+        '#0000FF', '#7F00FF', '#FF00FF', '#FF007F',
+        '#000000', '#FFFFFF'
+    ];
     paletteColors.forEach(color => {
         addColorToPalette(color);
     });
 }
 
-// Add a color to the palette
+// 添加颜色到调色板
 function addColorToPalette(color) {
     const button = document.createElement('div');
     button.className = 'color-button';
@@ -66,14 +67,13 @@ function addColorToPalette(color) {
     button.style.display = 'inline-block';
     button.style.margin = '2px';
 
-    // Click to select a color
     button.addEventListener('click', () => {
         selectedColor = color;
     });
 
     colorPalette.appendChild(button);
 
-    // Handle wrapping when more than 15 colors in a row
+    // 自动换行
     if (colorPalette.childElementCount % 15 === 0) {
         const breakLine = document.createElement('div');
         breakLine.style.width = '100%';
@@ -82,7 +82,7 @@ function addColorToPalette(color) {
     }
 }
 
-// Start painting or picking color
+// 开始操作
 function startAction(x, y) {
     if (isPickingColor) {
         pickColor(x, y);
@@ -91,35 +91,31 @@ function startAction(x, y) {
     isPainting = true;
 
     if (isSmearing) {
-        // Smearing mode
         handleSmearing(x, y);
     } else {
-        // Coloring mode
         drawCircle(x, y, brushSize, selectedColor);
         colors.push({ x, y, color: selectedColor });
     }
 }
 
-// Paint or smear while moving
+// 移动操作
 function moveAction(x, y) {
     if (!isPainting) return;
 
     if (isSmearing) {
-        // Smearing mode
         handleSmearing(x, y);
     } else {
-        // Coloring mode
         drawCircle(x, y, brushSize, selectedColor);
         colors.push({ x, y, color: selectedColor });
     }
 }
 
-// Stop painting or smearing
+// 停止操作
 function stopAction() {
     isPainting = false;
 }
 
-// Draw a circle on the canvas
+// 在画布上绘制圆形
 function drawCircle(x, y, size, color) {
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -127,7 +123,7 @@ function drawCircle(x, y, size, color) {
     ctx.fill();
 }
 
-// Pick a color from the canvas
+// 从画布中取色
 function pickColor(x, y) {
     const imageData = ctx.getImageData(x, y, 1, 1).data;
     const r = imageData[0];
@@ -136,24 +132,21 @@ function pickColor(x, y) {
     const pickedColor = `rgb(${r}, ${g}, ${b})`;
     selectedColor = pickedColor;
 
-    // Display the RGB value of the picked color
     colorInfo.textContent = `RGB 值: (${r}, ${g}, ${b})`;
-
-    // Show the picked color in the color picker input
     customColorInput.value = rgbToHex(r, g, b);
 
     isPickingColor = false;
     pickColorButton.textContent = '取色模式: 关';
 }
 
-// Handle smearing logic
+// 涂抹逻辑
 function handleSmearing(x, y) {
     const coveredColors = getCoveredColors(x, y);
     const newColor = blendColors(coveredColors, x, y);
     drawCircle(x, y, smearBrushSize, newColor);
 }
 
-// Get colors covered by the brush
+// 获取笔刷范围内的颜色
 function getCoveredColors(x, y) {
     return colors.filter(point => {
         const dx = point.x - x;
@@ -163,7 +156,7 @@ function getCoveredColors(x, y) {
     });
 }
 
-// Blend multiple colors with distance-based weighting
+// 混合多种颜色
 function blendColors(colorList, x, y) {
     if (colorList.length === 0) return '#ffffff';
 
@@ -189,7 +182,7 @@ function blendColors(colorList, x, y) {
     return `rgb(${r}, ${g}, ${b})`;
 }
 
-// Convert HEX to RGB
+// HEX 转 RGB
 function hexToRgb(hex) {
     const bigint = parseInt(hex.slice(1), 16);
     return {
@@ -199,16 +192,17 @@ function hexToRgb(hex) {
     };
 }
 
-// Convert RGB to HEX
+// RGB 转 HEX
 function rgbToHex(r, g, b) {
     return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
-// Event listeners for mouse and touch
+// 鼠标事件
 canvas.addEventListener('mousedown', (e) => startAction(e.offsetX, e.offsetY));
 canvas.addEventListener('mousemove', (e) => moveAction(e.offsetX, e.offsetY));
 canvas.addEventListener('mouseup', stopAction);
 
+// 触摸事件
 canvas.addEventListener('touchstart', (e) => {
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
@@ -223,6 +217,7 @@ canvas.addEventListener('touchmove', (e) => {
 });
 canvas.addEventListener('touchend', stopAction);
 
-// Initialize palette and buttons
+// 初始化调色板
 initPalette();
+
 
