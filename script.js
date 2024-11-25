@@ -223,6 +223,12 @@ clearButton.addEventListener('click', () => {
     colors = [];
 });
 
+// 切换涂抹模式
+paintButton.addEventListener('click', () => {
+    isSmearing = !isSmearing;
+    paintButton.textContent = isSmearing ? '涂抹模式: 开' : '涂抹模式: 关';
+});
+
 // 确定选择颜色
 confirmColorButton.addEventListener('click', () => {
     const customColor = customColorInput.value;
