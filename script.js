@@ -41,7 +41,7 @@ let isSmearing = false; // Smearing mode
 let isPickingColor = false; // Whether picking color
 let colors = []; // Store placed colors on the canvas
 
-// 添加 CSS: 禁用画布的默认触摸行为
+// 禁用画布默认触摸行为
 canvas.style.touchAction = 'none';
 
 // 初始化调色板
@@ -217,7 +217,22 @@ canvas.addEventListener('touchmove', (e) => {
 });
 canvas.addEventListener('touchend', stopAction);
 
+// 清空画布
+clearButton.addEventListener('click', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    colors = [];
+});
+
+// 确定选择颜色
+confirmColorButton.addEventListener('click', () => {
+    const customColor = customColorInput.value;
+    selectedColor = customColor;
+
+    const { r, g, b } = hexToRgb(customColor);
+    colorInfo.textContent = `RGB 值: (${r}, ${g}, ${b})`;
+
+    addColorToPalette(customColor);
+});
+
 // 初始化调色板
 initPalette();
-
-
