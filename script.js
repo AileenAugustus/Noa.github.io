@@ -43,20 +43,10 @@ let colors = []; // Store placed colors on the canvas
 
 // Define 14 colors (12 from the color wheel + black and white)
 const paletteColors = [
-    '#FF0000', // Red
-    '#FF7F00', // Orange
-    '#FFFF00', // Yellow
-    '#7FFF00', // Chartreuse Green
-    '#00FF00', // Green
-    '#00FF7F', // Spring Green
-    '#00FFFF', // Cyan
-    '#007FFF', // Azure Blue
-    '#0000FF', // Blue
-    '#7F00FF', // Violet
-    '#FF00FF', // Magenta
-    '#FF007F', // Rose
-    '#000000', // Black
-    '#FFFFFF'  // White
+    '#FF0000', '#FF7F00', '#FFFF00', '#7FFF00',
+    '#00FF00', '#00FF7F', '#00FFFF', '#007FFF',
+    '#0000FF', '#7F00FF', '#FF00FF', '#FF007F',
+    '#000000', '#FFFFFF'
 ];
 
 // Initialize color palette
@@ -92,71 +82,41 @@ function addColorToPalette(color) {
     }
 }
 
-// Start painting (coloring or smearing)
-canvas.addEventListener('mousedown', (event) => {
+// Start painting or picking color
+function startAction(x, y) {
     if (isPickingColor) {
-        pickColor(event.offsetX, event.offsetY);
+        pickColor(x, y);
         return;
     }
-
     isPainting = true;
-    const x = event.offsetX;
-    const y = event.offsetY;
 
     if (isSmearing) {
-        // In smearing mode, no immediate drawing
+        // Smearing mode
         handleSmearing(x, y);
     } else {
-        // In coloring mode, draw immediately
-        drawCircle(x, y, brushSize, selectedColor);
-        colors.push({ x, y, color: selectedColor }); // Add color point
-    }
-});
-
-// Paint or smear while dragging
-canvas.addEventListener('mousemove', (event) => {
-    if (!isPainting) return;
-
-    const x = event.offsetX;
-    const y = event.offsetY;
-
-    if (isSmearing) {
-        // Handle smearing logic
-        handleSmearing(x, y);
-    } else {
-        // Draw while dragging
+        // Coloring mode
         drawCircle(x, y, brushSize, selectedColor);
         colors.push({ x, y, color: selectedColor });
     }
-});
+}
 
-// Stop painting (coloring or smearing)
-canvas.addEventListener('mouseup', () => {
+// Paint or smear while moving
+function moveAction(x, y) {
+    if (!isPainting) return;
+
+    if (isSmearing) {
+        // Smearing mode
+        handleSmearing(x, y);
+    } else {
+        // Coloring mode
+        drawCircle(x, y, brushSize, selectedColor);
+        colors.push({ x, y, color: selectedColor });
+    }
+}
+
+// Stop painting or smearing
+function stopAction() {
     isPainting = false;
-});
-
-// Enable smearing mode
-paintButton.addEventListener('click', () => {
-    isSmearing = !isSmearing;
-    paintButton.textContent = isSmearing ? '涂抹模式: 开' : '涂抹模式: 关';
-});
-
-// Enable pick color mode
-pickColorButton.addEventListener('click', () => {
-    isPickingColor = !isPickingColor;
-    pickColorButton.textContent = isPickingColor ? '取色模式: 开' : '取色模式: 关';
-});
-
-// Handle smearing logic
-function handleSmearing(x, y) {
-    // Get colors within brush range
-    const coveredColors = getCoveredColors(x, y);
-
-    // Blend colors
-    const newColor = blendColors(coveredColors, x, y);
-
-    // Draw blended color
-    drawCircle(x, y, smearBrushSize, newColor);
 }
 
 // Draw a circle on the canvas
@@ -173,32 +133,25 @@ function pickColor(x, y) {
     const r = imageData[0];
     const g = imageData[1];
     const b = imageData[2];
-
     const pickedColor = `rgb(${r}, ${g}, ${b})`;
     selectedColor = pickedColor;
 
-    // Display the picked color in RGB format
+    // Display the RGB value of the picked color
     colorInfo.textContent = `RGB 值: (${r}, ${g}, ${b})`;
 
     // Show the picked color in the color picker input
     customColorInput.value = rgbToHex(r, g, b);
 
-    isPickingColor = false; // Exit pick color mode
+    isPickingColor = false;
     pickColorButton.textContent = '取色模式: 关';
 }
 
-// Update the selected color when "确定" is clicked
-confirmColorButton.addEventListener('click', () => {
-    const customColor = customColorInput.value;
-    selectedColor = customColor;
-
-    // Display the RGB value of the custom color
-    const { r, g, b } = hexToRgb(customColor);
-    colorInfo.textContent = `RGB 值: (${r}, ${g}, ${b})`;
-
-    // Add the custom color to the palette
-    addColorToPalette(customColor);
-});
+// Handle smearing logic
+function handleSmearing(x, y) {
+    const coveredColors = getCoveredColors(x, y);
+    const newColor = blendColors(coveredColors, x, y);
+    drawCircle(x, y, smearBrushSize, newColor);
+}
 
 // Get colors covered by the brush
 function getCoveredColors(x, y) {
@@ -212,18 +165,14 @@ function getCoveredColors(x, y) {
 
 // Blend multiple colors with distance-based weighting
 function blendColors(colorList, x, y) {
-    if (colorList.length === 0) return '#ffffff'; // Default to white if no colors found
+    if (colorList.length === 0) return '#ffffff';
 
     let totalWeight = 0;
     let r = 0, g = 0, b = 0;
 
     colorList.forEach(({ x: cx, y: cy, color }) => {
         const { r: cr, g: cg, b: cb } = hexToRgb(color);
-
-        // Calculate distance from the brush center
         const distance = Math.sqrt((cx - x) ** 2 + (cy - y) ** 2);
-
-        // Weight decreases with distance (use exponential decay for smoother effect)
         const weight = Math.exp(-distance / smearBrushSize);
 
         r += cr * weight;
@@ -232,20 +181,13 @@ function blendColors(colorList, x, y) {
         totalWeight += weight;
     });
 
-    if (totalWeight === 0) return '#ffffff'; // Prevent division by zero
-
+    if (totalWeight === 0) return '#ffffff';
     r = Math.round(r / totalWeight);
     g = Math.round(g / totalWeight);
     b = Math.round(b / totalWeight);
 
     return `rgb(${r}, ${g}, ${b})`;
 }
-
-// Clear the canvas
-clearButton.addEventListener('click', () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-    colors = []; // Reset the colors array
-});
 
 // Convert HEX to RGB
 function hexToRgb(hex) {
@@ -262,5 +204,25 @@ function rgbToHex(r, g, b) {
     return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
-// Initialize the palette
+// Event listeners for mouse and touch
+canvas.addEventListener('mousedown', (e) => startAction(e.offsetX, e.offsetY));
+canvas.addEventListener('mousemove', (e) => moveAction(e.offsetX, e.offsetY));
+canvas.addEventListener('mouseup', stopAction);
+
+canvas.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    startAction(touch.clientX - rect.left, touch.clientY - rect.top);
+    e.preventDefault();
+});
+canvas.addEventListener('touchmove', (e) => {
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    moveAction(touch.clientX - rect.left, touch.clientY - rect.top);
+    e.preventDefault();
+});
+canvas.addEventListener('touchend', stopAction);
+
+// Initialize palette and buttons
 initPalette();
+
