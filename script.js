@@ -50,6 +50,15 @@ function initPalette() {
     });
 }
 
+// 获取笔刷大小滑块元素
+const brushSizeSlider = document.getElementById('brushSizeSlider');
+
+// 添加滑块值变化的事件监听器
+brushSizeSlider.addEventListener('input', () => {
+    brushSize = parseInt(brushSizeSlider.value, 10);
+});
+
+
 // 添加颜色到调色板
 function addColorToPalette(color) {
     const button = document.createElement('div');
