@@ -1,7 +1,7 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const colorPalette = document.getElementById('colorPalette');
 const paintButton = document.getElementById('paintButton');
+const colorPalette = document.getElementById('colorPalette');
 
 // 创建清空画布按钮
 const clearButton = document.createElement('button');
@@ -32,7 +32,11 @@ let smearBrushSize = 90; // Default brush size for smearing
 let selectedColor = '#000000'; // Default selected color
 let isPainting = false; // Whether painting (coloring) is active
 let isSmearing = false; // Smearing mode
-let colors = []; // Store placed colors on the canvas
+
+// 存储画布颜色的二维数组
+const colorMatrix = Array(canvas.width)
+    .fill(null)
+    .map(() => Array(canvas.height).fill('#FFFFFF')); // Default white
 
 // 禁用画布默认触摸行为
 canvas.style.touchAction = 'none';
@@ -75,105 +79,49 @@ function addColorToPalette(color) {
     }
 }
 
-// 开始操作
-function startAction(x, y) {
-    isPainting = true;
-
-    if (isSmearing) {
-        handleSmearing(x, y);
-    } else {
-        drawCircle(x, y, brushSize, selectedColor);
-        colors.push({ x, y, color: selectedColor });
+// 绘制矩阵中所有颜色
+function drawColorMatrix() {
+    for (let x = 0; x < canvas.width; x++) {
+        for (let y = 0; y < canvas.height; y++) {
+            ctx.fillStyle = colorMatrix[x][y];
+            ctx.fillRect(x, y, 1, 1);
+        }
     }
 }
 
-// 移动操作
-function moveAction(x, y) {
-    if (!isPainting) return;
-
-    if (isSmearing) {
-        handleSmearing(x, y);
-    } else {
-        drawCircle(x, y, brushSize, selectedColor);
-        colors.push({ x, y, color: selectedColor });
-    }
-}
-
-// 停止操作
-function stopAction() {
-    isPainting = false;
-}
-
-// 在画布上绘制圆形
-function drawCircle(x, y, size, color) {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fill();
-}
-
-// 涂抹逻辑
+// 涂抹模式逻辑：更新矩阵中的颜色
 function handleSmearing(x, y) {
-    const coveredColors = getCoveredColors(x, y);
+    for (let i = -smearBrushSize; i <= smearBrushSize; i++) {
+        for (let j = -smearBrushSize; j <= smearBrushSize; j++) {
+            const dx = x + i;
+            const dy = y + j;
 
-    if (coveredColors.length === 0) return;
-
-    // Blend colors in the covered area
-    const newColor = blendColors(coveredColors, x, y);
-
-    // Update colors in `colors` array
-    coveredColors.forEach((point) => {
-        point.color = newColor;
-    });
-
-    // Redraw the affected area on the canvas
-    redrawCanvas();
+            if (
+                dx >= 0 &&
+                dx < canvas.width &&
+                dy >= 0 &&
+                dy < canvas.height &&
+                Math.sqrt(i ** 2 + j ** 2) <= smearBrushSize
+            ) {
+                const currentColor = colorMatrix[dx][dy];
+                const blendedColor = blendColors(currentColor, selectedColor);
+                colorMatrix[dx][dy] = blendedColor;
+            }
+        }
+    }
+    drawColorMatrix();
 }
 
-// 获取笔刷范围内的颜色
-function getCoveredColors(x, y) {
-    return colors.filter(point => {
-        const dx = point.x - x;
-        const dy = point.y - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance <= smearBrushSize; // Check if within brush size
-    });
-}
+// 混合两个颜色
+function blendColors(color1, color2) {
+    const c1 = hexToRgb(color1);
+    const c2 = hexToRgb(color2);
 
-// 重绘画布
-function redrawCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+    const r = Math.round((c1.r + c2.r) / 2);
+    const g = Math.round((c1.g + c2.g) / 2);
+    const b = Math.round((c1.b + c2.b) / 2);
 
-    colors.forEach(({ x, y, color }) => {
-        drawCircle(x, y, brushSize, color); // Draw each point with updated color
-    });
-}
-
-// 混合多种颜色
-function blendColors(colorList, x, y) {
-    if (colorList.length === 0) return '#ffffff';
-
-    let totalWeight = 0;
-    let r = 0, g = 0, b = 0;
-
-    colorList.forEach(({ x: cx, y: cy, color }) => {
-        const { r: cr, g: cg, b: cb } = hexToRgb(color);
-        const distance = Math.sqrt((cx - x) ** 2 + (cy - y) ** 2);
-        const weight = Math.exp(-distance / smearBrushSize);
-
-        r += cr * weight;
-        g += cg * weight;
-        b += cb * weight;
-        totalWeight += weight;
-    });
-
-    if (totalWeight === 0) return '#ffffff';
-
-    r = Math.round(r / totalWeight);
-    g = Math.round(g / totalWeight);
-    b = Math.round(b / totalWeight);
-
-    return `rgb(${r}, ${g}, ${b})`;
+    return rgbToHex(r, g, b);
 }
 
 // HEX 转 RGB
@@ -192,29 +140,45 @@ function rgbToHex(r, g, b) {
 }
 
 // 鼠标事件
-canvas.addEventListener('mousedown', (e) => startAction(e.offsetX, e.offsetY));
-canvas.addEventListener('mousemove', (e) => moveAction(e.offsetX, e.offsetY));
-canvas.addEventListener('mouseup', stopAction);
+canvas.addEventListener('mousedown', (e) => {
+    isPainting = true;
+    const x = Math.floor(e.offsetX);
+    const y = Math.floor(e.offsetY);
 
-// 触摸事件
-canvas.addEventListener('touchstart', (e) => {
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    startAction(touch.clientX - rect.left, touch.clientY - rect.top);
-    e.preventDefault();
+    if (isSmearing) {
+        handleSmearing(x, y);
+    } else {
+        colorMatrix[x][y] = selectedColor;
+        drawColorMatrix();
+    }
 });
-canvas.addEventListener('touchmove', (e) => {
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    moveAction(touch.clientX - rect.left, touch.clientY - rect.top);
-    e.preventDefault();
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!isPainting) return;
+
+    const x = Math.floor(e.offsetX);
+    const y = Math.floor(e.offsetY);
+
+    if (isSmearing) {
+        handleSmearing(x, y);
+    } else {
+        colorMatrix[x][y] = selectedColor;
+        drawColorMatrix();
+    }
 });
-canvas.addEventListener('touchend', stopAction);
+
+canvas.addEventListener('mouseup', () => {
+    isPainting = false;
+});
 
 // 清空画布
 clearButton.addEventListener('click', () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    colors = [];
+    for (let x = 0; x < canvas.width; x++) {
+        for (let y = 0; y < canvas.height; y++) {
+            colorMatrix[x][y] = '#FFFFFF';
+        }
+    }
+    drawColorMatrix();
 });
 
 // 切换涂抹模式
@@ -236,3 +200,4 @@ confirmColorButton.addEventListener('click', () => {
 
 // 初始化调色板
 initPalette();
+drawColorMatrix();
