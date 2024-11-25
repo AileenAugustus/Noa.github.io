@@ -9,12 +9,6 @@ clearButton.textContent = '清空画布';
 clearButton.style.marginLeft = '10px';
 document.getElementById('toolbar').appendChild(clearButton);
 
-// 创建取色按钮
-const pickColorButton = document.createElement('button');
-pickColorButton.textContent = '取色功能';
-pickColorButton.style.marginLeft = '10px';
-document.getElementById('toolbar').appendChild(pickColorButton);
-
 // 创建颜色选择器
 const customColorInput = document.createElement('input');
 customColorInput.type = 'color';
@@ -27,7 +21,7 @@ confirmColorButton.textContent = '确定';
 confirmColorButton.style.marginLeft = '5px';
 document.getElementById('toolbar').appendChild(confirmColorButton);
 
-// 显示取色信息的容器
+// 显示颜色信息的容器
 const colorInfo = document.createElement('div');
 colorInfo.textContent = 'RGB 值: ';
 colorInfo.style.marginTop = '10px';
@@ -38,7 +32,6 @@ let smearBrushSize = 90; // Default brush size for smearing
 let selectedColor = '#000000'; // Default selected color
 let isPainting = false; // Whether painting (coloring) is active
 let isSmearing = false; // Smearing mode
-let isPickingColor = false; // Whether picking color
 let colors = []; // Store placed colors on the canvas
 
 // 禁用画布默认触摸行为
@@ -84,10 +77,6 @@ function addColorToPalette(color) {
 
 // 开始操作
 function startAction(x, y) {
-    if (isPickingColor) {
-        pickColor(x, y);
-        return;
-    }
     isPainting = true;
 
     if (isSmearing) {
@@ -121,22 +110,6 @@ function drawCircle(x, y, size, color) {
     ctx.beginPath();
     ctx.arc(x, y, size, 0, Math.PI * 2);
     ctx.fill();
-}
-
-// 从画布中取色
-function pickColor(x, y) {
-    const imageData = ctx.getImageData(x, y, 1, 1).data;
-    const r = imageData[0];
-    const g = imageData[1];
-    const b = imageData[2];
-    const pickedColor = `rgb(${r}, ${g}, ${b})`;
-    selectedColor = pickedColor;
-
-    colorInfo.textContent = `RGB 值: (${r}, ${g}, ${b})`;
-    customColorInput.value = rgbToHex(r, g, b);
-
-    isPickingColor = false;
-    pickColorButton.textContent = '取色模式: 关';
 }
 
 // 涂抹逻辑
